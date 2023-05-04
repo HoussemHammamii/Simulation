@@ -1,0 +1,98 @@
+// Generating any mux using a 2*1 multiplexer
+// mux2 is not being handled for instantiation in muxGeneric; it can be instantiated directly from mux2
+// For this version of muxGeneric: it supports and has been tested on mux1, mux2, mux4, mux5, mux6 , mux7, mux8, mux9, mux10, mux16. It may not work correctly for non-mentionned multiplexers.
+
+module muxGeneric2 #(parameter muxSize=8)(selector,d,Q);
+	
+	
+	parameter selectorSize=$clog2(muxSize);
+	input [selectorSize-1:0] selector;
+	input [muxSize-1:0] d;
+	output Q;
+	
+	wire [muxSize-1:0] inter_output;
+	
+	
+	if (muxSize==1)
+	begin
+		assign Q = (d[0] & ~(selector[0])) ;
+		
+	end
+
+	if (muxSize==2) begin
+		mux2 test0 (.cmd(selector[0]),.i0(d[0]),.i1(d[1]),.Q(Q));
+	end
+	
+	if (muxSize>2) begin
+		genvar i;
+		for (i=0;i<muxSize-1;i=i+1)
+
+		begin
+		if(i<(muxSize/2)) begin
+			mux2 test1 (.cmd(selector[i/muxSize]),.i0(d[2*i]),.i1(d[2*i+1]),.Q(inter_output[i])); 
+		end
+
+		else if ((i/(muxSize-2))==1 & muxSize%2==1) begin
+			if ((muxSize/2)%2==1) begin
+				mux2 test2(.cmd(selector[selectorSize-1]),.i0(inter_output[i-2]),.i1(inter_output[i-1]),.Q(Q));
+			end
+
+			else begin
+				mux2 test11(.cmd(selector[selectorSize-1]),.i0(inter_output[muxSize-3]),.i1(d[muxSize-1]),.Q(Q));
+			end
+		end 
+
+		else if ((i/(muxSize-2))==1 & (muxSize/2)%2==1) begin
+			mux2 test5 (.cmd(selector[selectorSize-1]),.i0(inter_output[i-1]),.i1(inter_output[(muxSize/2)-1]),.Q(Q));
+		end
+
+		else if ((i/(muxSize-2))==1) begin
+			mux2 test4 (.cmd(selector[selectorSize-1]),.i0(inter_output[i-2]),.i1(inter_output[i-1]),.Q(Q));
+		end
+		
+		else
+			begin
+	
+
+				if ( muxSize%2==1 & (muxSize/2)%2==0) begin
+					// Example mux9, mux5 
+					// Last iteration
+					if (i==muxSize-3) begin
+						mux2 test7 (.cmd(selector[selectorSize-2]),.i0(inter_output[2*i-muxSize+1]),.i1(inter_output[2*i-muxSize+2]),.Q(inter_output[i]));
+					end
+					// Hidden Layers
+					else begin
+						mux2 test12 (.cmd(selector[i/(muxSize/2)]),.i0(inter_output[2*i-muxSize+1]),.i1(inter_output[2*i-muxSize+2]),.Q(inter_output[i]));
+					end
+				end
+
+				//Example: mux7, mux11
+				else if (muxSize%2==1 & (muxSize/2)%2==1) begin
+						//Last iteration
+						if (i==muxSize-3) begin
+							mux2 test9 (.cmd(selector[selectorSize-2]),.i0(inter_output[(muxSize/2)-1]),.i1(d[muxSize-1]),.Q(inter_output[i]));
+						end
+						//Hidden Layers
+						else begin
+							mux2 test10(.cmd(selector[((muxSize/2)*i)/muxSize]),.i0(inter_output[2*i-muxSize+1]),.i1(inter_output[2*i-muxSize+2]),.Q(inter_output[i]));
+						end
+				end
+				// example: mux6 
+				else if ((muxSize%2==0) &(muxSize/2)%2==1 ) begin
+					// Last layer
+					if ((2*i-(muxSize/2))/(selectorSize)>1) begin
+						mux2 test8 (.cmd(selector[(2*i-(muxSize/2))/(selectorSize)]),.i0(inter_output[i-2]),.i1(inter_output[i-1]),.Q(inter_output[i]));
+					end
+					// Hidden Layers
+					else begin
+					mux2 test3 (.cmd(selector[(2*i-(muxSize/2))/(selectorSize)]),.i0(inter_output[2*i-muxSize]),.i1(inter_output[2*i-muxSize+1]),.Q(inter_output[i]));
+					end
+				end
+
+				else begin
+					mux2 test6 (.cmd(selector[((2*i-(muxSize/2))/muxSize)+1]),.i0(inter_output[2*i-muxSize]),.i1(inter_output[2*i-muxSize+1]),.Q(inter_output[i]));
+				end			
+			end
+	end
+	end
+endmodule 
